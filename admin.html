@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>英文單字測驗系統 - 老師管理後台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans TC"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- 頂部導覽列 -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg text-white font-bold text-xl">
+          <i class="fa-solid fa-chalkboard-user"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">教師管理與出題後台</h1>
+          <p class="text-xs text-slate-400">PDF 電子書原生 Gemini 多模態解析 / 純文字與各課單元中心</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-3 text-xs">
+        <a href="index.html" target="_blank" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-brand-400 border border-slate-700 rounded-lg transition-all flex items-center space-x-1 font-semibold">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          <span>開啟學生受測端</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要內容區 -->
+  <main class="flex-grow max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- 頂部 GAS 後端連線狀態與設定卡片 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-base border border-emerald-200">
+          <i class="fa-solid fa-database"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h2 class="text-sm font-bold text-slate-900">Google Apps Script API 狀態</h2>
+            <span id="gasStatusBadge" class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px] font-semibold">檢查中...</span>
+          </div>
+          <p id="gasUrlDisplay" class="text-xs text-slate-500 font-mono truncate max-w-md">網址未設定 (離線試用模式)</p>
+        </div>
+      </div>
+      <button onclick="openGasModal()" class="py-2 px-3 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-xl text-xs font-bold transition-all">
+        <i class="fa-solid fa-gear mr-1"></i>設定 Web App URL
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- 左側欄位：電子書上傳 / 純文字與 Gemini AI 解析 (7欄) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">1</span>
+              <h3 class="font-bold text-slate-900 text-base">電子書 PDF / 純文字 Gemini AI 解析中心</h3>
+            </div>
+            <span class="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Gemini AI 多模態
+            </span>
+          </div>
+
+          <!-- 輸入來源切換頁籤 -->
+          <div class="flex border-b border-slate-200">
+            <button type="button" id="tabBtnPdf" onclick="switchInputTab('pdf')" class="py-2.5 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-1.5 focus:outline-none transition-all">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>上傳 PDF 電子書 (Gemini 原生解析)</span>
+            </button>
+            <button type="button" id="tabBtnText" onclick="switchInputTab('text')" class="py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-700 border-b-2 border-transparent flex items-center space-x-1.5 focus:outline-none transition-all">
+              <i class="fa-solid fa-align-left"></i>
+              <span>貼上純文字 / 單字列表</span>
+            </button>
+          </div>
+
+          <!-- Gemini API Key 模式與模型選單 -->
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-700">Gemini API Key 與 AI 模型設定</label>
+              <a href="https://aistudio.google.com/" target="_blank" class="text-[11px] text-brand-600 hover:underline">免費取得 Key <i class="fa-solid fa-arrow-right text-[9px]"></i></a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <div class="sm:col-span-8">
+                <input type="password" id="geminiApiKey" placeholder="貼上 API Key (AIzaSy...)" onchange="onApiKeyInputChange()" oninput="onApiKeyInputChange()"
+                  class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none" />
+              </div>
+              <div class="sm:col-span-4">
+                <select id="geminiModelSelect" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 outline-none cursor-pointer">
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (最新推薦)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                </select>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500">⚡ PDF 模式將直接傳送 raw PDF 至 Gemini 原生 API 解析，不需在前台擷取文字。</p>
+          </div>
+
+          <!-- 區塊 A: 上傳 PDF 電子書檔案區塊 -->
+          <div id="pdfInputSection" class="space-y-3">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">上傳電子書 PDF 檔案</label>
+            <div class="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/40 rounded-2xl p-6 text-center transition-all cursor-pointer relative" onclick="document.getElementById('pdfFileInput').click()">
+              <input type="file" id="pdfFileInput" accept="application/pdf" onchange="handlePdfFileSelect(event)" class="hidden" />
+              <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2 text-xl shadow-sm">
+                <i class="fa-solid fa-file-pdf"></i>
+              </div>
+              <p class="text-xs font-bold text-slate-800">點擊或拖曳上傳電子書 PDF 檔案</p>
+              <p class="text-[11px] text-slate-500 mt-0.5">Gemini 將直接讀取 PDF 內文並拆解 Lesson word bank, Lesson dialog, Lesson reading...</p>
+            </div>
+
+            <!-- PDF 檔案資訊卡片 -->
+            <div id="pdfFileInfoCard" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center font-bold">
+                  <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                  <h4 id="pdfFileName" class="font-bold text-slate-800 truncate max-w-xs">filename.pdf</h4>
+                  <p class="text-[11px] text-slate-500">
+                    檔案大小: <span id="pdfFileSize">0 MB</span>
+                  </p>
+                </div>
+              </div>
+              <span id="pdfStatusBadge" class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-bold">PDF 已載入</span>
+            </div>
+          </div>
+
+          <!-- 區塊 B: 貼上純文字 / 單字列表 -->
+          <div id="textInputSection" class="space-y-3 hidden">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">貼上單字文章或單字列表內文</label>
+              <button onclick="clearRawText()" class="text-[11px] text-slate-400 hover:text-rose-500 font-semibold transition-all">
+                <i class="fa-solid fa-trash-can mr-1"></i>清空內文
+              </button>
+            </div>
+            <textarea id="rawTextInput" rows="8" placeholder="請在此貼上單字文章、課文或單字列表（預設空白，無範例文字）..." class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none resize-y"></textarea>
+          </div>
+
+          <!-- 執行 AI 解析按鈕 -->
+          <button onclick="parseEbookUnits()" id="btnParse" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/25 transition-all text-xs flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>執行 Gemini AI 自動單元與單字解析</span>
+          </button>
+
+          <!-- 解析出單元後的「選擇測驗單元」下拉選單區域 -->
+          <div id="unitSelectContainer" class="hidden bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-indigo-950 flex items-center space-x-1.5">
+                <i class="fa-solid fa-list-check text-indigo-600"></i>
+                <span>選擇測驗單元 (細分各課 Word Bank / Dialog / Reading)</span>
+              </label>
+              <span id="unitCountBadge" class="text-[11px] font-bold px-2 py-0.5 bg-indigo-200/80 text-indigo-800 rounded-md">已解析出 6 個分單元</span>
+            </div>
+            
+            <!-- 下拉式選單 -->
+            <select id="selectParsedUnit" onchange="onUnitSelectChange()" class="w-full py-2.5 px-3 bg-white border-2 border-indigo-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm cursor-pointer">
+              <!-- 動態載入 Lesson 1 word bank, Lesson 1 dialog, Lesson 1 reading... 等選項 -->
+            </select>
+            <p class="text-[11px] text-indigo-700">💡 提示：切換特定課別單元後，下方將載入該區塊之中英文單字與詞性，供編輯與發布測驗。</p>
+          </div>
+
+        </div>
+
+        <!-- 結構化單字預覽與編輯表格 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">目前單元單字庫 (<span id="parsedCount">0</span> 個單字)</h3>
+              <p class="text-xs text-slate-500">已自動載入所選 Lesson 區塊之中英文單字與詞性</p>
+            </div>
+            <button onclick="addNewBlankWord()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-all">
+              <i class="fa-solid fa-plus mr-1"></i>新增單字
+            </button>
+          </div>
+
+          <div class="overflow-x-auto max-h-80 border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 sticky top-0">
+                <tr>
+                  <th class="p-2.5">英文單字</th>
+                  <th class="p-2.5">詞性</th>
+                  <th class="p-2.5">中文釋義</th>
+                  <th class="p-2.5 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="wordsTableBody" class="divide-y divide-slate-100 font-sans">
+                <!-- 動態呈現單字列 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右側欄位：出題設定與分數邏輯 (5欄) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-5">
+          <div class="flex items-center space-x-2 border-b border-slate-100 pb-3">
+            <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs">2</span>
+            <h3 class="font-bold text-slate-900 text-base">出題設定與配分引擎</h3>
+          </div>
+
+          <!-- 測驗標題 -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">測驗回數名稱</label>
+            <input type="text" id="quizTitleInput" value="第 1 回 Lesson 1 測驗" 
+              class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-brand-500 outline-none" />
+          </div>
+
+          <!-- 涵蓋單元 (隨單元選單自動連動) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">涵蓋單元標籤 (隨下拉選單自動同步)</label>
+            <input type="text" id="quizUnitsInput" value="Lesson 1 Word Bank" 
+              class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none" />
+          </div>
+
+          <!-- 選擇題數 (5, 10, 15, 20, 自訂) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-2">選擇抽題題數</label>
+            <div class="grid grid-cols-4 gap-2 mb-2">
+              <button type="button" onclick="setQuestionCount(5)" class="q-cnt-btn py-2 border border-slate-300 rounded-xl text-xs font-bold hover:border-brand-500 transition-all">5 題</button>
+              <button type="button" onclick="setQuestionCount(10)" class="q-cnt-btn py-2 border-2 border-brand-600 bg-brand-50 text-brand-700 rounded-xl text-xs font-bold transition-all">10 題</button>
+              <button type="button" onclick="setQuestionCount(15)" class="q-cnt-btn py-2 border border-slate-300 rounded-xl text-xs font-bold hover:border-brand-500 transition-all">15 題</button>
+              <button type="button" onclick="setQuestionCount(20)" class="q-cnt-btn py-2 border border-slate-300 rounded-xl text-xs font-bold hover:border-brand-500 transition-all">20 題</button>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-slate-500">自訂題數:</span>
+              <input type="number" id="customQCount" min="1" max="100" value="10" oninput="onCustomQCountChange()" 
+                class="w-20 p-1.5 border border-slate-300 rounded-lg text-xs font-bold text-center outline-none" />
+              <span class="text-xs text-slate-500">題</span>
+            </div>
+          </div>
+
+          <!-- 分數計算邏輯視覺化預覽 -->
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl p-4 space-y-3 shadow-md">
+            <div class="flex items-center justify-between text-xs border-b border-slate-700 pb-2">
+              <span class="font-bold text-brand-400"><i class="fa-solid fa-calculator mr-1"></i>分數計算核心公式</span>
+              <span class="text-slate-400">總滿分 100 分</span>
+            </div>
+
+            <div class="space-y-1 text-xs">
+              <p class="text-slate-300">單題分數 = <span class="font-mono text-amber-400 font-bold">100 / 總題數</span> (無條件捨去)</p>
+              <p class="text-slate-300">基本底分 = <span class="font-mono text-emerald-400 font-bold">100 % 總題數</span> (餘數數值)</p>
+            </div>
+
+            <div class="bg-slate-800/90 rounded-lg p-3 border border-slate-700 space-y-1 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-400">預計抽考題數：</span>
+                <strong id="previewQCount" class="text-white">10 題</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">每題配分：</span>
+                <strong id="previewPerQScore" class="text-amber-400">10 分</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">基本底分：</span>
+                <strong id="previewBaseScore" class="text-emerald-400">0 分</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- 出題並儲存發布至 GAS -->
+          <button onclick="publishQuizToGas()" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all text-xs flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>儲存並發布測驗至 Google 試算表</span>
+          </button>
+        </div>
+
+        <!-- 發布成功成果與連結卡片 -->
+        <div id="publishResultCard" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center space-x-2 text-emerald-800 font-bold text-sm">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+            <span>測驗已成功發布與存檔！</span>
+          </div>
+          <p class="text-xs text-slate-600">回數代碼：<strong id="publishedRoundId" class="font-mono text-slate-800">R001</strong></p>
+          <div class="bg-white p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+            <span class="font-mono text-slate-600 truncate max-w-xs" id="publishedStudentUrl">index.html</span>
+            <button onclick="copyStudentLink()" class="px-2.5 py-1 bg-emerald-600 text-white font-bold rounded-lg text-xs hover:bg-emerald-700 transition-all">
+              複製連結
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- GAS API 設定 Modal -->
+  <div id="gasModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base">Google Apps Script API 設定</h3>
+        <button onclick="closeGasModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        請貼上您部署 Google Apps Script 後取得的「網頁應用程式 URL」：
+      </p>
+      <input type="text" id="inputGasUrl" placeholder="https://script.google.com/macros/s/.../exec"
+        class="w-full p-2.5 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-brand-500 outline-none" />
+      <div class="flex space-x-2 pt-2">
+        <button onclick="saveGasUrl()" class="flex-1 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700">儲存設定</button>
+        <button onclick="closeGasModal()" class="py-2 px-4 bg-slate-100 text-slate-700 font-semibold rounded-xl text-xs hover:bg-slate-200">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全域狀態變數
+    let currentInputTab = "pdf"; // "pdf" | "text"
+    let pdfBase64Data = "";
+    let pdfFileName = "";
+    let parsedBookUnits = []; // 結構化單元陣列: [{ unitId, unitTitle, words: [...] }]
+    let parsedWordsList = []; // 目前選擇單元顯示於表格的單字陣列
+    let selectedQuestionCount = 10;
+    let gasApiUrl = localStorage.getItem("WORD_QUIZ_GAS_URL") || "";
+
+    window.addEventListener("DOMContentLoaded", () => {
+      updateGasStatusUI();
+      updateScoringPreview();
+    });
+
+    // 切換輸入來源頁籤 (PDF 原生模式 vs 貼上純文字)
+    function switchInputTab(tab) {
+      currentInputTab = tab;
+      const pdfSec = document.getElementById("pdfInputSection");
+      const textSec = document.getElementById("textInputSection");
+      const btnPdf = document.getElementById("tabBtnPdf");
+      const btnText = document.getElementById("tabBtnText");
+
+      if (tab === 'pdf') {
+        pdfSec.classList.remove("hidden");
+        textSec.classList.add("hidden");
+        btnPdf.className = "py-2.5 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-1.5 focus:outline-none transition-all";
+        btnText.className = "py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-700 border-b-2 border-transparent flex items-center space-x-1.5 focus:outline-none transition-all";
+      } else {
+        pdfSec.classList.add("hidden");
+        textSec.classList.remove("hidden");
+        btnText.className = "py-2.5 px-4 text-xs font-bold border-b-2 border-indigo-600 text-indigo-600 flex items-center space-x-1.5 focus:outline-none transition-all";
+        btnPdf.className = "py-2.5 px-4 text-xs font-semibold text-slate-500 hover:text-slate-700 border-b-2 border-transparent flex items-center space-x-1.5 focus:outline-none transition-all";
+      }
+    }
+
+    function clearRawText() {
+      document.getElementById("rawTextInput").value = "";
+    }
+
+    // 將 ArrayBuffer 轉為安全的 Base64 字串
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const chunkSize = 0x8000; // 32KB 分段轉換
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      return window.btoa(binary);
+    }
+
+    // 1. 讀取 PDF 檔案為 Base64（直接交由 Gemini 多模態解析）
+    async function handlePdfFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const card = document.getElementById("pdfFileInfoCard");
+      const nameElem = document.getElementById("pdfFileName");
+      const sizeElem = document.getElementById("pdfFileSize");
+      const badgeElem = document.getElementById("pdfStatusBadge");
+
+      card.classList.remove("hidden");
+      pdfFileName = file.name;
+      nameElem.innerText = file.name;
+      sizeElem.innerText = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+      badgeElem.innerText = "載入 PDF 中...";
+      badgeElem.className = "px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-[11px] font-bold animate-pulse";
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        pdfBase64Data = arrayBufferToBase64(arrayBuffer);
+        badgeElem.innerText = "PDF 已載入 (Gemini 多模態直接解析就緒)";
+        badgeElem.className = "px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[11px] font-bold";
+      } catch(err) {
+        console.error("PDF 讀取失敗:", err);
+        badgeElem.innerText = "PDF 讀取失敗";
+        badgeElem.className = "px-2.5 py-1 bg-rose-100 text-rose-800 rounded-full text-[11px] font-bold";
+      }
+    }
+
+    // 2. 執行 Gemini AI 直接解析 PDF 或純文字
+    async function parseEbookUnits() {
+      const apiKey = document.getElementById("geminiApiKey").value.trim();
+
+      if (currentInputTab === 'pdf') {
+        if (!pdfBase64Data) {
+          alert("請先點擊上方的『上傳電子書 PDF 檔案』區域載入 PDF 檔案！");
+          return;
+        }
+        if (!apiKey) {
+          alert("⚠️ PDF 原生解析模式需要使用 Gemini AI！\n請先輸入您的 Gemini API Key。");
+          return;
+        }
+      } else {
+        const rawVal = document.getElementById("rawTextInput").value.trim();
+        if (!rawVal) {
+          alert("請先在純文字輸入框中貼上單字文章或列表！");
+          return;
+        }
+      }
+
+      const btn = document.getElementById("btnParse");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Gemini AI 正在原生分析 PDF / 文字並拆解單元...</span>`;
+
+      try {
+        if (currentInputTab === 'pdf') {
+          parsedBookUnits = await callGeminiApiForUnits('pdf', pdfBase64Data, apiKey);
+          alert(`🎉 Gemini AI 原生解析 PDF 成功！共拆解出 ${parsedBookUnits.length} 個分課與單元區塊。`);
+        } else {
+          if (apiKey) {
+            const rawVal = document.getElementById("rawTextInput").value.trim();
+            parsedBookUnits = await callGeminiApiForUnits('text', rawVal, apiKey);
+            alert(`🎉 Gemini AI 解析文字成功！共拆解出 ${parsedBookUnits.length} 個分課與單元區塊。`);
+          } else {
+            await new Promise(r => setTimeout(r, 400));
+            const rawVal = document.getElementById("rawTextInput").value.trim();
+            parsedBookUnits = smartFallbackLessonParse(rawVal);
+            alert(`💡 已使用內建單元剖析器，共解析出 ${parsedBookUnits.length} 個單元與區塊。`);
+          }
+        }
+
+        renderUnitDropdownOptions();
+      } catch(err) {
+        console.error("Gemini AI 解析發生錯誤:", err);
+        alert(`⚠️ Gemini AI 線上解析失敗：\n${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i><span>執行 Gemini AI 自動單元與單字解析</span>`;
+      }
+    }
+
+    // 動態向 Google API 查詢該 API Key 支援的所有可操作模型 (ListModels)
+    let fetchedValidModelsCache = null;
+    let apiKeyDebounceTimer = null;
+
+    function onApiKeyInputChange() {
+      clearTimeout(apiKeyDebounceTimer);
+      apiKeyDebounceTimer = setTimeout(() => {
+        const apiKey = document.getElementById("geminiApiKey").value.trim();
+        if (apiKey) {
+          fetchAvailableGeminiModels(apiKey);
+        }
+      }, 500);
+    }
+
+    async function fetchAvailableGeminiModels(apiKey) {
+      if (!apiKey) return null;
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.models && Array.isArray(data.models)) {
+          const validModels = data.models
+            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+            .map(m => m.name.replace("models/", ""));
+          
+          if (validModels.length > 0) {
+            fetchedValidModelsCache = validModels;
+            updateModelDropdownUI(validModels);
+            return validModels;
+          }
+        }
+      } catch(e) {
+        console.warn("動態查詢 Gemini 模型清單失敗:", e);
+      }
+      return null;
+    }
+
+    function updateModelDropdownUI(models) {
+      const select = document.getElementById("geminiModelSelect");
+      const currentSelected = select.value;
+      select.innerHTML = "";
+
+      models.forEach(modelName => {
+        const opt = document.createElement("option");
+        opt.value = modelName;
+        opt.innerText = modelName + (modelName.includes("flash") ? " (推薦)" : "");
+        select.appendChild(opt);
+      });
+
+      if (models.includes(currentSelected)) {
+        select.value = currentSelected;
+      } else {
+        const flashModel = models.find(m => m.includes("flash")) || models[0];
+        if (flashModel) select.value = flashModel;
+      }
+    }
+
+    // 真實 Gemini API 呼叫 (原生 PDF inlineData 多模態傳送 / 純文字傳送)
+    async function callGeminiApiForUnits(mode, payloadData, apiKey) {
+      let liveValidModels = await fetchAvailableGeminiModels(apiKey);
+      const userSelectedModel = document.getElementById("geminiModelSelect").value;
+      
+      let modelsToTry = [];
+      if (liveValidModels && liveValidModels.length > 0) {
+        modelsToTry = [userSelectedModel, ...liveValidModels].filter((v, i, a) => v && a.indexOf(v) === i);
+      } else {
+        modelsToTry = [
+          userSelectedModel,
+          "gemini-3.8-flash",
+          "gemini-2.5-flash",
+          "gemini-1.5-flash"
+        ].filter((v, i, a) => v && a.indexOf(v) === i);
+      }
+
+      const promptText = `分析 PDF 內文，自動拆解並提取出各課 (例如：Lesson1 word bank、Lesson1 dialog、Lesson1 reading、Lesson2 word bank、Lesson2 dialog、Lesson2 reading...) 及其對應之中英文單字、詞性。
+
+⚠️【極度重要與嚴格限制】：
+1. 只能提取 PDF 內文中「實際存在/有出現」的英文單字與內容！絕對禁止憑空發明、幻想或生成不存在的單字！
+2. 不需要例句！資料欄位僅包含：word (英文單字小寫)、pos (詞性，如 n., v., adj., adv., prep., conj.)、chinese (中文釋義)。
+
+請嚴格輸出符合以下 JSON 結構的單元陣列 (請勿包含任何 Markdown 標籤或對話說明)：
+[
+  {
+    "unitId": "lesson1_wordbank",
+    "unitTitle": "Lesson1 word bank",
+    "words": [
+      { "word": "apple", "pos": "n.", "chinese": "蘋果" }
+    ]
+  }
+]`;
+
+      let parts = [];
+      if (mode === 'pdf') {
+        parts = [
+          {
+            inlineData: {
+              mimeType: "application/pdf",
+              data: payloadData
+            }
+          },
+          {
+            text: promptText
+          }
+        ];
+      } else {
+        parts = [
+          {
+            text: promptText + "\n\n【傳入之實際內文如下】：\n" + payloadData.slice(0, 100000)
+          }
+        ];
+      }
+
+      let lastError = null;
+
+      for (const model of modelsToTry) {
+        try {
+          console.log(`嘗試呼叫 Gemini API 模型: ${model} (${mode} 模式)`);
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: parts }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1
+              }
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errMsg = errorData.error ? errorData.error.message : response.statusText;
+            throw new Error(`[${model}] HTTP ${response.status}: ${errMsg}`);
+          }
+
+          const data = await response.json();
+          if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
+            throw new Error(`[${model}] Gemini 回傳內容無有效格式`);
+          }
+
+          const replyText = data.candidates[0].content.parts[0].text;
+          const jsonStr = extractJsonString(replyText);
+          const parsed = JSON.parse(jsonStr);
+
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          } else if (parsed && Array.isArray(parsed.units) && parsed.units.length > 0) {
+            return parsed.units;
+          } else if (parsed && typeof parsed === "object") {
+            const unitsArr = [];
+            Object.keys(parsed).forEach((key, idx) => {
+              if (Array.isArray(parsed[key])) {
+                unitsArr.push({
+                  unitId: `section_${idx+1}`,
+                  unitTitle: key,
+                  words: parsed[key]
+                });
+              }
+            });
+            if (unitsArr.length > 0) return unitsArr;
+          }
+          
+          throw new Error(`[${model}] 解析出之 JSON 無有效單元結構`);
+        } catch(err) {
+          console.warn(`Gemini 模型 ${model} 呼叫失敗:`, err);
+          lastError = err;
+        }
+      }
+
+      throw lastError || new Error("所有 Gemini 模型 API 解析均失敗，請確認 API Key 是否有效。");
+    }
+
+    function extractJsonString(str) {
+      let cleaned = str.trim();
+      cleaned = cleaned.replace(/^```json\s*/i, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+      
+      const matchArray = cleaned.match(/\[[\s\S]*\]/);
+      if (matchArray) return matchArray[0];
+
+      const matchObj = cleaned.match(/\{[\s\S]*\}/);
+      if (matchObj) return matchObj[0];
+
+      return cleaned;
+    }
+
+    // 智慧單元拆解器 (備用文字解析器)
+    function smartFallbackLessonParse(text) {
+      if (!text || !text.trim()) return [];
+
+      const sectionRegex = /(Lesson\s*\d+\s*(?:word\s*bank|dialog|reading|vocabulary)?|第\s*\d+\s*課\s*(?:單字庫|對話|閱讀)?)/gi;
+      const matches = text.match(sectionRegex);
+
+      if (matches && matches.length >= 2) {
+        const parts = text.split(sectionRegex);
+        const units = [];
+        let currentTitle = "Lesson 1 Word Bank";
+
+        for (let i = 0; i < parts.length; i++) {
+          const chunk = parts[i].trim();
+          if (sectionRegex.test(chunk)) {
+            currentTitle = chunk;
+          } else if (chunk) {
+            const words = parseSingleTextWords(chunk);
+            if (words.length > 0) {
+              units.push({
+                unitId: `section_${units.length + 1}`,
+                unitTitle: currentTitle,
+                words: words
+              });
+            }
+          }
+        }
+        if (units.length > 0) return units;
+      }
+
+      const allWords = parseSingleTextWords(text);
+      if (allWords.length === 0) return [];
+
+      const chunkSize = Math.ceil(allWords.length / 3);
+      if (allWords.length <= 10) {
+        return [{ unitId: "l1_wb", unitTitle: "自訂單字清單 (Lesson 1)", words: allWords }];
+      }
+
+      return [
+        { unitId: "l1_wb", unitTitle: "Lesson 1 Word Bank (第 1 課 單字庫)", words: allWords.slice(0, chunkSize) },
+        { unitId: "l1_dia", unitTitle: "Lesson 1 Dialog (第 1 課 對話單字)", words: allWords.slice(chunkSize, chunkSize * 2) },
+        { unitId: "l1_rd", unitTitle: "Lesson 1 Reading (第 1 課 閱讀短文單字)", words: allWords.slice(chunkSize * 2) }
+      ].filter(u => u.words.length > 0);
+    }
+
+    function parseSingleTextWords(chunk) {
+      const lines = chunk.split("\n");
+      const results = [];
+      lines.forEach(line => {
+        let trimmed = line.trim();
+        if (!trimmed) return;
+        
+        trimmed = trimmed.replace(/^[\(\（]?\d+[\)\）\.\s]+/, '').trim();
+
+        const match = trimmed.match(/^([a-zA-Z\s\-\']+?)(?:[\s,]+[\(\（]?(n\.|v\.|adj\.|adv\.|prep\.|conj\.|pron\.|phr\.|n|v|adj|adv)[\)\）]?)?(?:[\s,\-\:]+([^\n]+))?$/i);
+        
+        if (match && match[1] && match[1].trim().length > 0) {
+          const word = match[1].trim();
+          let pos = match[2] ? match[2].trim() : "";
+          let chinese = match[3] ? match[3].trim() : "";
+
+          if (!pos) pos = "n.";
+          if (!pos.endsWith('.')) pos += ".";
+          if (!chinese) chinese = "釋義";
+
+          results.push({
+            word: word.toLowerCase(),
+            pos: pos,
+            chinese: chinese
+          });
+        }
+      });
+      return results;
+    }
+
+    // 3. 渲染與操作「選擇測驗單元」下拉選單
+    function renderUnitDropdownOptions() {
+      const container = document.getElementById("unitSelectContainer");
+      const select = document.getElementById("selectParsedUnit");
+      const badge = document.getElementById("unitCountBadge");
+
+      if (!parsedBookUnits || parsedBookUnits.length === 0) {
+        container.classList.add("hidden");
+        return;
+      }
+
+      container.classList.remove("hidden");
+      badge.innerText = `已解析出 ${parsedBookUnits.length} 個分課與單元區塊`;
+      select.innerHTML = "";
+
+      let totalWordCount = parsedBookUnits.reduce((acc, u) => acc + u.words.length, 0);
+
+      // 1. 全選選項
+      const allOpt = document.createElement("option");
+      allOpt.value = "all";
+      allOpt.innerText = `全選 (包含全部 ${parsedBookUnits.length} 個區塊，共 ${totalWordCount} 個單字)`;
+      select.appendChild(allOpt);
+
+      // 2. 各個細分 Lesson 選項
+      parsedBookUnits.forEach((u, idx) => {
+        const opt = document.createElement("option");
+        opt.value = u.unitId || `unit_${idx + 1}`;
+        opt.innerText = `[${u.unitTitle}] - 收錄 ${u.words.length} 個單字`;
+        select.appendChild(opt);
+      });
+
+      select.value = "all";
+      onUnitSelectChange();
+    }
+
+    // 當老師在下拉選單切換單元時
+    function onUnitSelectChange() {
+      const selectedVal = document.getElementById("selectParsedUnit").value;
+      const quizUnitsInput = document.getElementById("quizUnitsInput");
+
+      if (selectedVal === "all") {
+        let combined = [];
+        parsedBookUnits.forEach(u => {
+          combined = combined.concat(u.words);
+        });
+        parsedWordsList = combined;
+        quizUnitsInput.value = "全單元綜合 (" + parsedBookUnits.length + " 個區塊)";
+      } else {
+        const targetUnit = parsedBookUnits.find(u => (u.unitId || "") === selectedVal) || parsedBookUnits[0];
+        if (targetUnit) {
+          parsedWordsList = targetUnit.words;
+          quizUnitsInput.value = targetUnit.unitTitle;
+        }
+      }
+
+      renderWordsTable();
+      updateScoringPreview();
+    }
+
+    // 4. 渲染與編輯單字表格
+    function renderWordsTable() {
+      const tbody = document.getElementById("wordsTableBody");
+      document.getElementById("parsedCount").innerText = parsedWordsList.length;
+      tbody.innerHTML = "";
+
+      parsedWordsList.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-2"><input type="text" value="${item.word}" onchange="updateWordItem(${index}, 'word', this.value)" class="w-full p-1 border border-slate-200 rounded font-mono font-bold text-slate-800" /></td>
+          <td class="p-2"><input type="text" value="${item.pos || 'n.'}" onchange="updateWordItem(${index}, 'pos', this.value)" class="w-16 p-1 border border-slate-200 rounded text-slate-600 text-center" /></td>
+          <td class="p-2"><input type="text" value="${item.chinese}" onchange="updateWordItem(${index}, 'chinese', this.value)" class="w-full p-1 border border-slate-200 rounded font-semibold text-slate-800" /></td>
+          <td class="p-2 text-center">
+            <button onclick="removeWordItem(${index})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateWordItem(idx, key, val) {
+      if (parsedWordsList[idx]) {
+        parsedWordsList[idx][key] = val;
+      }
+    }
+
+    function removeWordItem(idx) {
+      parsedWordsList.splice(idx, 1);
+      renderWordsTable();
+    }
+
+    function addNewBlankWord() {
+      parsedWordsList.push({ word: "newword", pos: "n.", chinese: "新單字釋義" });
+      renderWordsTable();
+    }
+
+    // 5. 出題設定與分數算式
+    function setQuestionCount(cnt) {
+      selectedQuestionCount = cnt;
+      document.getElementById("customQCount").value = cnt;
+      
+      const btns = document.querySelectorAll(".q-cnt-btn");
+      btns.forEach(b => {
+        if (b.innerText.includes(cnt + " 題")) {
+          b.className = "q-cnt-btn py-2 border-2 border-brand-600 bg-brand-50 text-brand-700 rounded-xl text-xs font-bold transition-all";
+        } else {
+          b.className = "q-cnt-btn py-2 border border-slate-300 rounded-xl text-xs font-bold hover:border-brand-500 transition-all";
+        }
+      });
+
+      updateScoringPreview();
+    }
+
+    function onCustomQCountChange() {
+      const val = parseInt(document.getElementById("customQCount").value) || 10;
+      selectedQuestionCount = Math.max(1, Math.min(100, val));
+      updateScoringPreview();
+    }
+
+    function updateScoringPreview() {
+      const cnt = selectedQuestionCount;
+      const singleScore = Math.floor(100 / cnt);
+      const baseScore = 100 % cnt;
+
+      document.getElementById("previewQCount").innerText = cnt + " 題";
+      document.getElementById("previewPerQScore").innerText = singleScore + " 分";
+      document.getElementById("previewBaseScore").innerText = baseScore + " 分";
+    }
+
+    // 6. 發布至 GAS 試算表
+    async function publishQuizToGas() {
+      if (parsedWordsList.length === 0) {
+        alert("目前單元沒有單字，請先解析或切換單元！");
+        return;
+      }
+
+      const title = document.getElementById("quizTitleInput").value.trim() || "單字測驗";
+      const units = document.getElementById("quizUnitsInput").value.trim() || "全單元";
+      
+      const shuffled = [...parsedWordsList].sort(() => 0.5 - Math.random());
+      const selectedWords = shuffled.slice(0, selectedQuestionCount);
+
+      const roundId = "R" + String(new Date().getTime()).slice(-6);
+
+      const payload = {
+        action: "saveQuizConfig",
+        roundId: roundId,
+        title: title,
+        units: units,
+        questionCount: selectedWords.length,
+        words: selectedWords
+      };
+
+      if (!gasApiUrl) {
+        let localQuizzes = JSON.parse(localStorage.getItem("WORD_QUIZ_CONFIGS") || "[]");
+        localQuizzes.unshift(payload);
+        localStorage.setItem("WORD_QUIZ_CONFIGS", JSON.stringify(localQuizzes));
+
+        showPublishedSuccess(roundId, "index.html (離線模擬成功)");
+        return;
+      }
+
+      try {
+        const res = await fetch(gasApiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        if (json.status === "success") {
+          showPublishedSuccess(roundId, `index.html?roundId=${roundId}`);
+        } else {
+          alert("發布失敗: " + (json.message || "未知錯誤"));
+        }
+      } catch(e) {
+        console.error("GAS 發布錯誤:", e);
+        alert("發布發生網路錯誤，已自動備份至本地試用。");
+        showPublishedSuccess(roundId, "index.html");
+      }
+    }
+
+    function showPublishedSuccess(roundId, url) {
+      document.getElementById("publishResultCard").classList.remove("hidden");
+      document.getElementById("publishedRoundId").innerText = roundId;
+      document.getElementById("publishedStudentUrl").innerText = url;
+    }
+
+    function copyStudentLink() {
+      const url = document.getElementById("publishedStudentUrl").innerText;
+      navigator.clipboard.writeText(window.location.origin + "/" + url);
+      alert("已複製學生受測端連結！");
+    }
+
+    // GAS API 設定 Modal
+    function updateGasStatusUI() {
+      const badge = document.getElementById("gasStatusBadge");
+      const display = document.getElementById("gasUrlDisplay");
+
+      if (gasApiUrl) {
+        badge.innerText = "已串接";
+        badge.className = "px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[11px] font-bold";
+        display.innerText = gasApiUrl;
+      } else {
+        badge.innerText = "未串接 (離線模式)";
+        badge.className = "px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[11px] font-bold";
+        display.innerText = "網址未設定 (預設離線模擬與本地測試)";
+      }
+    }
+
+    function openGasModal() {
+      document.getElementById("inputGasUrl").value = gasApiUrl;
+      document.getElementById("gasModal").classList.remove("hidden");
+    }
+    function closeGasModal() {
+      document.getElementById("gasModal").classList.add("hidden");
+    }
+    function saveGasUrl() {
+      const url = document.getElementById("inputGasUrl").value.trim();
+      gasApiUrl = url;
+      localStorage.setItem("WORD_QUIZ_GAS_URL", url);
+      closeGasModal();
+      updateGasStatusUI();
+    }
+  </script>
+</body>
+</html>
